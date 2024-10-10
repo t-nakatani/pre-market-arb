@@ -1,0 +1,16 @@
+[project]
+name = "pre-market"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ccxt>=4.4.14",
+    "pytest>=8.3.3",
+    "python-dotenv>=1.0.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "src"
+]
