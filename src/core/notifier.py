@@ -25,11 +25,12 @@ class Notifier:
 
     async def listen_hyperliquid_limit_order(self):
         print('start listening hyperliquid limit order')
-        # while True:
-        #     orders = await self.hyperliquid_client.watch_orders()
-        #     for order in orders:
-        #         if order['status'] == 'filled': 
-        #             self._notify_order_filled(Exchange.HYPERLIQUID, order)
+        while True:
+            orders = await self.hyperliquid_client.watch_orders()
+            for order in orders:
+                print(order['id'], order['status'], order['side'])
+                if order['status'] == 'filled': 
+                    self._notify_order_filled(Exchange.HYPERLIQUID, order)
 
     def _notify_order_filled(self, eaten_exchange: Exchange, order: dict[str, Any]):
         another_exchange = Exchange.HYPERLIQUID if eaten_exchange == Exchange.BYBIT else Exchange.BYBIT

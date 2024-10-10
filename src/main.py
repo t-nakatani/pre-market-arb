@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-symbol = 'SCRUSDT'
+symbol = 'SCR'
 badget = 2
 
 bybit_ccxt_pro_client = ccxt_pro.bybit({
@@ -21,7 +21,10 @@ bybit_ccxt_pro_client = ccxt_pro.bybit({
     'options': { 'recvWindow': 7000 },  # default 5000
 })
 
-hyperliquid_ccxt_pro_client = ccxt_pro.hyperliquid()
+hyperliquid_ccxt_pro_client = ccxt_pro.hyperliquid({
+    'walletAddress': os.getenv('HYLIQ_ADDRESS'),
+    'privateKey': os.getenv('HYLIQ_SECRET'),
+})
 
 bybit_client = BybitClient(bybit_ccxt_pro_client)    
 hyperliquid_client = HyperliquidClient(hyperliquid_ccxt_pro_client)

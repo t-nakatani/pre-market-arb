@@ -5,6 +5,11 @@ from core.types import Side
 
 
 class IExchangeClient(ABC):
+
+    @abstractmethod
+    def _as_pair(self, symbol: str) -> str:
+        pass
+
     @abstractmethod
     async def get_orderbook(self, symbol: str) -> dict[str, Any]:
         pass

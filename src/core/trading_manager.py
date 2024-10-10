@@ -7,9 +7,10 @@ from core.types import Exchange, Side
 
 
 class TradingConfig:
-    def __init__(self, symbol: str, badget: float):
+    def __init__(self, symbol: str, badget: float, delta: float = 0.05):
         self.symbol = symbol
         self.badget = badget
+        self.delta = delta
 
 
 class TradingManager:
@@ -24,23 +25,26 @@ class TradingManager:
     async def _place_market_order(self, exchange: Exchange, side: Side, amount: float):
         pass
 
-    async def _get_amount(self, exchange: Exchange, side: Side):
+    def _get_amount(self):
         # TODO: refine
-        mid_price = await self.price_oracle.get_mid_prices(self.config.symbol)
         # return self.config.badget / mid_price
-        return 1
+        return 8
     
-    async def _place_dual_limit_orders(self, exchange: Exchange, side: Side):
-        bybit_mid_price, hyperliquid_mid_price = await self.price_oracle.get_mid_prices(self.symbol)
-        amount = self._get_amount(exchange, side)
-        print(bybit_mid_price, hyperliquid_mid_price, amount)
+    async def _place_dual_limit_orders(self):
+        bybit_mid_price, hyperliquid_mid_price = await self.price_oracle.get_mid_prices(self.config.symbol)
+        mid_price = (bybit_mid_price + hyperliquid_mid_price) / 2
+        amount = self._get_amount()
+        lower_price = mid_price * (1 - self.config.delta)
+        higher_price = mid_price * (1 + self.config.delta)
+        return await self.executor.place_dual_limit_orders(self.config.symbol, amount, (lower_price, higher_price))
 
+    async def update_dual_limit_orders(self):
+        pass
 
     async def run(self):
         try:
-            amount = await self._get_amount(Exchange.BYBIT, Side.BUY)
             tasks = [
-                self.executor.place_dual_limit_orders(self.config.symbol, amount, (1, 2)),
+                self._place_dual_limit_orders(),
                 self.notifier.listen_bybit_limit_order(),
                 self.notifier.listen_hyperliquid_limit_order()
             ]
