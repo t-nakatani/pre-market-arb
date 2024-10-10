@@ -14,24 +14,30 @@ class TradeExecutor:
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
         return client.place_order(symbol, 'limit', side, amount, price)
 
-    async def place_dual_limit_orders(self, symbol: str, amount: float, prices: (float, float)):
-        await asyncio.sleep(10)
-        lower_price, higher_price = prices
-        assert lower_price < higher_price
+    async def place_dual_limit_orders(self, symbol: str, amount: float, bybit_prices: (float, float), hyperliquid_prices: (float, float)):
+        bybit_lower_price, bybit_higher_price = bybit_prices
+        hyperliquid_lower_price, hyperliquid_higher_price = hyperliquid_prices
+        assert bybit_lower_price < bybit_higher_price
+        assert hyperliquid_lower_price < hyperliquid_higher_price
 
-        # SELL higher price
-        await self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.SELL, amount, higher_price)
-        await self.hyperliquid_client.place_order(symbol, 'limit', Side.SELL, amount, higher_price)
-
-        # BUY lower price
-        await self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.BUY, amount, lower_price)
-        await self.hyperliquid_client.place_order(symbol, 'limit', Side.BUY, amount, lower_price)
+        await asyncio.gather(
+            self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.SELL, amount, bybit_higher_price),
+            self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.BUY, amount, bybit_lower_price),
+            self.hyperliquid_client.place_order(symbol, OrderType.LIMIT, Side.SELL, amount, hyperliquid_higher_price),
+            self.hyperliquid_client.place_order(symbol, OrderType.LIMIT, Side.BUY, amount, hyperliquid_lower_price)
+        )
         print('placed dual limit orders')
 
     async def place_market_order(self, exchange: Exchange, symbol: str, side: str, amount: float):
         # TODO
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
         return client.place_market_order(symbol, side, amount)
+
+    async def cancel_all_orders(self, symbol: str):
+        await asyncio.gather(
+            self.bybit_client.cancel_all_orders(symbol),
+            self.hyperliquid_client.cancel_all_orders(symbol)
+        )
 
     async def close(self):
         await self.bybit_client.close()

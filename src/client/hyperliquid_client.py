@@ -2,7 +2,7 @@ from functools import wraps
 from typing import Any
 
 from client.i_client import IExchangeClient
-from core.types import Side
+from core.types import OrderType, Side
 
 
 def with_user_params(func):
@@ -23,15 +23,18 @@ class HyperliquidClient(IExchangeClient):
     def _as_pair(self, symbol: str) -> str:
         return f'{symbol}/USDC:USDC'
 
-    async def get_orderbook(self, symbol: str) -> dict[str, Any]:
-        return await self.exchange.fetch_order_book(self._as_pair(symbol))
+    async def watch_orderbook(self, symbol: str) -> dict[str, Any]:
+        return await self.exchange.watch_order_book(self._as_pair(symbol))
 
-    async def place_order(self, symbol: str, order_type: str, side: Side, amount: float, price: float = None):
-        return await self.exchange.create_order(self._as_pair(symbol), order_type, side.value, amount, price)
+    async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
+        return await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, amount, price)
 
     @with_user_params
     async def watch_orders(self, **kwargs) -> list[dict[str, Any]]:
         return await self.exchange.watch_orders(**kwargs)
+
+    async def cancel_all_orders(self, symbol: str):
+        return await self.exchange.cancel_all_orders_after(timeout=0)
 
     async def close(self):
         await self.exchange.close()

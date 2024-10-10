@@ -11,14 +11,17 @@ class BybitClient(IExchangeClient):
     def _as_pair(self, symbol: str) -> str:
         return f'{symbol}USDT'
 
-    async def get_orderbook(self, symbol: str) -> dict[str, Any]:
-        return await self.exchange.fetch_order_book(self._as_pair(symbol))
+    async def watch_orderbook(self, symbol: str) -> dict[str, Any]:
+        return await self.exchange.watch_order_book(self._as_pair(symbol))
 
     async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
         return await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, str(amount), price)
 
     async def watch_orders(self) -> list[dict[str, Any]]:
         return await self.exchange.watch_orders()
+
+    async def cancel_all_orders(self, symbol: str):
+        return await self.exchange.cancel_all_orders(self._as_pair(symbol))
 
     async def close(self):
         await self.exchange.close()

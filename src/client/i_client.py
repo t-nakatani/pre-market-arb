@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from core.types import Side
+from core.types import OrderType, Side
 
 
 class IExchangeClient(ABC):
@@ -11,15 +11,19 @@ class IExchangeClient(ABC):
         pass
 
     @abstractmethod
-    async def get_orderbook(self, symbol: str) -> dict[str, Any]:
+    async def watch_orderbook(self, symbol: str) -> dict[str, Any]:
         pass
 
     @abstractmethod
-    async def place_order(self, symbol: str, order_type: str, side: Side, amount: float, price: float = None):
+    async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
         pass
 
     @abstractmethod
     async def watch_orders(self) -> list[dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def cancel_all_orders(self, symbol: str):
         pass
 
     @abstractmethod
