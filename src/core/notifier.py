@@ -17,7 +17,7 @@ class Notifier:
             orders = await self.bybit_client.watch_orders()
             for order in orders:
                 logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
-                if order['status'] == 'filled':
+                if order['status'] == 'closed':
                     logger.info(f'{order["id"]} filled in bybit')
                     self._notify_order_filled(Exchange.BYBIT, order)
 
@@ -27,10 +27,10 @@ class Notifier:
             orders = await self.hyperliquid_client.watch_orders()
             for order in orders:
                 logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
-                if order['status'] == 'filled':
+                if order['status'] == 'closed':
                     logger.info(f'{order["id"]} filled in hyperliquid')
                     self._notify_order_filled(Exchange.HYPERLIQUID, order)
 
     def _notify_order_filled(self, eaten_exchange: Exchange, order: dict[str, Any]):
         another_exchange = Exchange.HYPERLIQUID if eaten_exchange == Exchange.BYBIT else Exchange.BYBIT
-        self.trading_manager.settle_another_side(another_exchange, order['side'], order['amount'], order['price'])
+        await self.trading_manager.settle_another_side(another_exchange, order['side'], order['amount'], order['price'])
