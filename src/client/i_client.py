@@ -23,7 +23,7 @@ class IExchangeClient(ABC):
         pass
 
     @abstractmethod
-    async def cancel_all_orders(self, symbol: str):
+    async def cancel_all_orders(self, symbol: str, order_ids: list[str]):
         pass
 
     @abstractmethod

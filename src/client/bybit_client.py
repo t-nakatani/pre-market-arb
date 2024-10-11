@@ -15,12 +15,15 @@ class BybitClient(IExchangeClient):
         return await self.exchange.watch_order_book(self._as_pair(symbol))
 
     async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
-        return await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, str(amount), price)
+        reciept = await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, str(amount), price)
+        return reciept['info']['orderId']
 
     async def watch_orders(self) -> list[dict[str, Any]]:
         return await self.exchange.watch_orders()
 
-    async def cancel_all_orders(self, symbol: str):
+    async def cancel_all_orders(self, symbol: str, order_ids: list[str]):
+        if not order_ids:
+            return
         return await self.exchange.cancel_all_orders(self._as_pair(symbol))
 
     async def close(self):

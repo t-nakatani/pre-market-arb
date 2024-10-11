@@ -27,14 +27,17 @@ class HyperliquidClient(IExchangeClient):
         return await self.exchange.watch_order_book(self._as_pair(symbol))
 
     async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
-        return await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, amount, price)
+        reciept = await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, amount, price)
+        return reciept['id']
 
     @with_user_params
     async def watch_orders(self, **kwargs) -> list[dict[str, Any]]:
         return await self.exchange.watch_orders(**kwargs)
 
-    async def cancel_all_orders(self, symbol: str):
-        return await self.exchange.cancel_all_orders_after(timeout=0)
+    async def cancel_all_orders(self, symbol: str, order_ids: list[str]):
+        if not order_ids:
+            return
+        return await self.exchange.cancel_orders(ids=order_ids, symbol=self._as_pair(symbol))
 
     async def close(self):
         await self.exchange.close()
