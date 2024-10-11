@@ -7,8 +7,9 @@ from client.hyperliquid_client import HyperliquidClient
 from core.notifier import Notifier
 from core.price_oracle import PriceOracle
 from core.trade_executor import TradeExecutor
-from core.trading_manager import TradingConfig, TradingManager
+from core.trading_manager import Orders, TradingConfig, TradingManager
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
@@ -31,10 +32,11 @@ hyperliquid_client = HyperliquidClient(hyperliquid_ccxt_pro_client)
 price_oracle = PriceOracle(bybit_client, hyperliquid_client)
 executor = TradeExecutor(bybit_client, hyperliquid_client)
 trading_config = TradingConfig(symbol=symbol, badget=badget)
-trading_manager = TradingManager(trading_config, executor, price_oracle)
+orders = Orders()
+trading_manager = TradingManager(trading_config, orders, executor, price_oracle)
 contract_notifier = Notifier(trading_manager, bybit_client, hyperliquid_client)
 trading_manager.attach_notifier(contract_notifier)
 
-print('start running bot')
+logger.info('start running bot')
 asyncio.run(trading_manager.run())
-print('end running bot')
+logger.info('end running bot')

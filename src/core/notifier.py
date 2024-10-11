@@ -1,11 +1,8 @@
-import asyncio
-import random
 from typing import Any
 
 from client.i_client import IExchangeClient
-
-# from core.trading_manager import TradingManager
 from core.types import Exchange
+from loguru import logger
 
 
 class Notifier:
@@ -15,21 +12,23 @@ class Notifier:
         self.hyperliquid_client = hyperliquid_client
 
     async def listen_bybit_limit_order(self):
-        print('start listening bybit limit order')
+        logger.info('start listening bybit limit order')
         while True:
             orders = await self.bybit_client.watch_orders()
             for order in orders:
-                print(order['id'], order['status'], order['side'])
+                logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
                 if order['status'] == 'filled':
+                    logger.info(f'{order["id"]} filled in bybit')
                     self._notify_order_filled(Exchange.BYBIT, order)
 
     async def listen_hyperliquid_limit_order(self):
-        print('start listening hyperliquid limit order')
+        logger.info('start listening hyperliquid limit order')
         while True:
             orders = await self.hyperliquid_client.watch_orders()
             for order in orders:
-                print(order['id'], order['status'], order['side'])
-                if order['status'] == 'filled': 
+                logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
+                if order['status'] == 'filled':
+                    logger.info(f'{order["id"]} filled in hyperliquid')
                     self._notify_order_filled(Exchange.HYPERLIQUID, order)
 
     def _notify_order_filled(self, eaten_exchange: Exchange, order: dict[str, Any]):
