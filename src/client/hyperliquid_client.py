@@ -19,7 +19,10 @@ def with_user_params(func):
 class HyperliquidClient(IExchangeClient):
     def __init__(self, ccxt_client):
         self.exchange = ccxt_client
-    
+
+    def __str__(self):
+        return "hyperliquid"
+
     def _as_pair(self, symbol: str) -> str:
         return f'{symbol}/USDC:USDC'
 

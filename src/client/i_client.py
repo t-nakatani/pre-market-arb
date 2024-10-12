@@ -7,6 +7,10 @@ from core.types import OrderType, Side
 class IExchangeClient(ABC):
 
     @abstractmethod
+    def __str__(self) -> str:
+        pass
+
+    @abstractmethod
     def _as_pair(self, symbol: str) -> str:
         pass
 
