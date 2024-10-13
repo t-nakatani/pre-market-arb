@@ -15,21 +15,6 @@ class TradeExecutor:
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
         return client.place_order(symbol, 'limit', side, amount, price)
 
-    async def place_dual_limit_orders(self, symbol: str, amount: float, bybit_prices: (float, float), hyperliquid_prices: (float, float)):
-        bybit_lower_price, bybit_higher_price = bybit_prices
-        hyperliquid_lower_price, hyperliquid_higher_price = hyperliquid_prices
-        assert bybit_lower_price < bybit_higher_price
-        assert hyperliquid_lower_price < hyperliquid_higher_price
-
-        results = await asyncio.gather(
-            self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.SELL, amount, bybit_higher_price),
-            self.bybit_client.place_order(symbol, OrderType.LIMIT, Side.BUY, amount, bybit_lower_price),
-            self.hyperliquid_client.place_order(symbol, OrderType.LIMIT, Side.SELL, amount, hyperliquid_higher_price),
-            self.hyperliquid_client.place_order(symbol, OrderType.LIMIT, Side.BUY, amount, hyperliquid_lower_price)
-        )
-        logger.debug('placed dual limit orders')
-        return results
-
     async def place_market_order(self, exchange: Exchange, symbol: str, side: str, amount: float):
         # TODO
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
