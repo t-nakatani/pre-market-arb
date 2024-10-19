@@ -7,6 +7,7 @@ from client.hyperliquid_client import HyperliquidClient
 from core.notifier import Notifier
 from core.orderbook_searcher import OrderbookSearcher
 from core.price_oracle import PriceOracle
+from core.sub_strategy.oi_capped_arb_strategy import OICappedArbStrategy
 from core.trade_executor import TradeExecutor
 from core.trading_config import TradingConfig
 from core.trading_manager import TradingManager
@@ -17,6 +18,7 @@ load_dotenv()
 
 symbol = 'SCR'
 badget = 2
+oi_capped_arb_strategy = OICappedArbStrategy()
 
 bybit_ccxt_pro_client = ccxt_pro.bybit({
     'apiKey': os.getenv('BYBIT_KEY'),
@@ -36,7 +38,7 @@ price_oracle = PriceOracle(bybit_client, hyperliquid_client)
 trade_executor = TradeExecutor(bybit_client, hyperliquid_client)
 notifier = Notifier(bybit_client, hyperliquid_client)
 
-trading_manager = TradingManager(trading_config, price_oracle, trade_executor, notifier)
+trading_manager = TradingManager(trading_config, price_oracle, trade_executor, notifier, oi_capped_arb_strategy)
 orderbook_searcher = OrderbookSearcher(symbol=symbol, ccxt_bybit_client=bybit_ccxt_pro_client, ccxt_hyperliquid_client=hyperliquid_ccxt_pro_client)
 
 logger.info('start running bot')

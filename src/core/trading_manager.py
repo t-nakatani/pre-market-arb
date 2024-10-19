@@ -4,6 +4,7 @@ from core.notifier import Notifier
 from core.observer_pattern.i_observer_mixin import IMarketStatusObserverMixin
 from core.orderbook_searcher import OrderbookSearcher
 from core.price_oracle import PriceOracle
+from core.sub_strategy.i_sub_strategy import ISubStrategy
 from core.trade_container import TradeContainer
 from core.trade_executor import TradeExecutor
 from core.trading_config import TradingConfig
@@ -12,14 +13,15 @@ from loguru import logger
 
 
 class MarketStatusObserverMixin(IMarketStatusObserverMixin):
-    def __init__(self):
+    def __init__(self, sub_strategy: ISubStrategy):
         self.containers: dict[StrategyChoice, TradeContainer] = {}
+        self.sub_strategy = sub_strategy
 
     async def on_market_status_changed(self, strategy_choice: StrategyChoice, should_trade: bool):
         if should_trade:
             if strategy_choice not in self.containers:
                 config = TradeStrategy.get_config(self.config.symbol, self.config.badget, strategy_choice)
-                container = TradeContainer(config, self.price_oracle, self.trade_executor)
+                container = TradeContainer(config, self.price_oracle, self.trade_executor, self.sub_strategy)
                 self.containers[strategy_choice] = container
                 await container.start(self.notifier)
                 logger.info(f"Started container for {strategy_choice}")
@@ -33,12 +35,18 @@ class MarketStatusObserverMixin(IMarketStatusObserverMixin):
 
 
 class TradingManager(MarketStatusObserverMixin):
-    def __init__(self, config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor, notifier: Notifier):
-        super().__init__()
+    def __init__(self, config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor, notifier: Notifier, sub_strategy: ISubStrategy):
+        super().__init__(sub_strategy)
         self.config = config
         self.price_oracle = price_oracle
         self.trade_executor = trade_executor
         self.notifier = notifier
+
+    def get_status(self):
+        return {
+            "active_strategies": [strategy.value for strategy in self.containers.keys()],
+            "container_statuses": {strategy: container.get_status() for strategy, container in self.containers.items()}
+        }
 
     async def start_search(self, searcher: OrderbookSearcher):
         try:
@@ -57,9 +65,3 @@ class TradingManager(MarketStatusObserverMixin):
         for container in self.containers.values():
             await container.stop()
         self.containers.clear()
-
-    def get_status(self):
-        return {
-            "active_strategies": [strategy.value for strategy in self.containers.keys()],
-            "container_statuses": {strategy: container.get_status() for strategy, container in self.containers.items()}
-        }

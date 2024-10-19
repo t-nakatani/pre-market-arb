@@ -3,7 +3,7 @@ from typing import Optional
 
 from core.exceptions import OrderClosedException
 from core.notifier import Notifier
-from core.observer_mixin import ISettleObserverMixin
+from core.observer_pattern.i_observer_mixin import ISettleObserverMixin
 from core.price_oracle import PriceOracle
 from core.sub_strategy.i_sub_strategy import ISubStrategy
 from core.trade_executor import TradeExecutor
@@ -39,7 +39,7 @@ class TradeContainer(SettleObserverMixin):
         self.trade_config: TradingConfig = trade_config
         self.price_oracle: PriceOracle = price_oracle
         self.trade_executor: TradeExecutor = trade_executor
-        self.sub_strategy: ISubStrategy = sub_strategy
+        self._sub_strategy: ISubStrategy = sub_strategy
         logger.debug(f"TradeContainer initialized: {self.trade_config.symbol}")
 
     @property
@@ -79,6 +79,7 @@ class TradeContainer(SettleObserverMixin):
     async def _sticky_limit_order(self) -> None:
         """スティッキーリミットオーダーを実行します。"""
         try:
+            price_precision, amount_precision = await self.trade_executor.get_precisions(self.trade_config.limit_info.exchange, self.trade_config.symbol)
             order_id = None
             limit_price = None
             while self.is_running:
@@ -88,14 +89,16 @@ class TradeContainer(SettleObserverMixin):
                     await asyncio.sleep(1)
                     continue
 
-                new_limit_price = self._sub_strategy.determine_limit_price(best_prices)
+                new_limit_price = self._sub_strategy.determine_limit_price(
+                    best_prices, self.trade_config.limit_info.side, price_precision
+                )
                 if new_limit_price == limit_price:
                     await asyncio.sleep(0.1)
                     continue
 
                 limit_price = new_limit_price
                 amount = self.get_amount()
-                order_id = await self._place_or_edit_order(order_id, limit_price, amount)
+                order_id = await self._place_limit_order(order_id, limit_price, amount)
                 self._update_order_id(order_id)
                 logger.info(f"Updated order id: {order_id}")
 
@@ -104,7 +107,7 @@ class TradeContainer(SettleObserverMixin):
         except Exception as e:
             logger.error(f"_sticky_limit_orderでエラーが発生しました: {e}")
         finally:
-            await self._cleanup()
+            await self._cleanup(order_id)
 
     async def _place_limit_order(self, order_id, limit_price, amount):
         """注文を配置または編集します。"""
@@ -138,11 +141,11 @@ class TradeContainer(SettleObserverMixin):
         order_id = await self.trade_executor.place_market_order(exchange, self.trade_config.symbol, side, amount)
         logger.info(f"Settled opposite order for {self.trade_config.symbol}: {side.value} {amount}, {order_id}")
 
-    async def _cleanup(self):
+    async def _cleanup(self, order_id: str):
         """取引終了時のクリーンアップ処理を行います。"""
         await self.trade_executor.cancel_order(
             exchange=self.trade_config.limit_info.exchange,
+            order_id=order_id,
             symbol=self.trade_config.symbol,
-            side=self.trade_config.limit_info.side
         )
         logger.info(f"{self.trade_config.symbol}の_sticky_limit_orderを停止しました")
