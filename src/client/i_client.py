@@ -23,7 +23,15 @@ class IExchangeClient(ABC):
         pass
 
     @abstractmethod
+    async def edit_order(self, order_id: str, symbol: str, order_type: OrderType, side: Side, amount: float, price: float):
+        pass
+
+    @abstractmethod
     async def watch_orders(self) -> list[dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def cancel_order(self, order_id: str, symbol: str):
         pass
 
     @abstractmethod

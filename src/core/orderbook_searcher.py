@@ -1,3 +1,4 @@
+# TODO: oracleを使ってリファクタリングする
 import asyncio
 
 import ccxt.pro as ccxt
@@ -50,9 +51,8 @@ class OrderbookSearcher:
             best_prices = await _get_best_prices()
             search_results = TradeStrategy.judge(best_prices, threshold=trade_threshold)
             for strategy_choice, should_trade in search_results.items():
-                logger.info(f"Strategy {strategy_choice} should trade: {should_trade}")
                 await self.notify_market_status_changed(strategy_choice, should_trade)
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.1)
 
     async def start(self, trade_threshold: float):
         logger.info("Starting OrderbookMonitor")

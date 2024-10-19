@@ -13,9 +13,13 @@ class Notifier:
         self.hyperliquid_client = hyperliquid_client
         self.is_running = False
         self.tasks = []
+        self.observers: dict[SettleObserverMixin, str] = {}
 
     def register_observer(self, observer: SettleObserverMixin):
-        self.observer = observer
+        self.observers[observer] = None
+
+    def update_topic(self, observer: SettleObserverMixin, topic: str):
+        self.observers[observer] = topic
 
     async def start(self):
         if not self.is_running:
@@ -38,10 +42,16 @@ class Notifier:
         while self.is_running:
             orders = await self.bybit_client.watch_orders()
             for order in orders:
-                logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
+                logger.info(f'{order["id"]} {order["status"]} {order["side"]}')
                 if order['status'] == 'closed':
                     logger.info(f'{order["id"]} filled in bybit')
-                    await self.observer.on_order_filled(Exchange.BYBIT, order)
+                    for observer, order_id in self.observers.items():
+                        logger.debug(f"order_id: {order_id}, order['id']: {order['id']}")
+                        if order['id'] == order_id:
+                            try:
+                                await observer.on_order_filled(Exchange.BYBIT, order)
+                            except Exception as e:
+                                logger.error(f"Error in observer.on_order_filled: {e}")
 
     async def listen_hyperliquid_limit_order(self):
         logger.info('start listening hyperliquid limit order')
@@ -51,4 +61,10 @@ class Notifier:
                 logger.debug(f'{order["id"]} {order["status"]} {order["side"]}')
                 if order['status'] == 'closed':
                     logger.info(f'{order["id"]} filled in hyperliquid')
-                    await self.observer.on_order_filled(Exchange.HYPERLIQUID, order)
+                    for observer, order_id in self.observers.items():
+                        logger.debug(f"order_id: {order_id}, order['id']: {order['id']}")
+                        if order['id'] == order_id:
+                            try:
+                                await observer.on_order_filled(Exchange.HYPERLIQUID, order)
+                            except Exception as e:
+                                logger.error(f"Error in observer.on_order_filled: {e}")

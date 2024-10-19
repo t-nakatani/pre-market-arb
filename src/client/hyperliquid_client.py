@@ -2,7 +2,9 @@ from functools import wraps
 from typing import Any
 
 from client.i_client import IExchangeClient
+from core.exceptions import OrderClosedException
 from core.types import OrderType, Side
+from loguru import logger
 
 
 def with_user_params(func):
@@ -26,16 +28,42 @@ class HyperliquidClient(IExchangeClient):
     def _as_pair(self, symbol: str) -> str:
         return f'{symbol}/USDC:USDC'
 
+    async def fetch_precision(self, symbol: str) -> tuple[float, float]:
+        await self.exchange.load_markets()
+        market = self.exchange.market(self._as_pair(symbol))
+        assert type(market['precision']['price']) is int, "price precision is not int"
+        price_tick = 10 ** - (market['precision']['price'] - 1)
+        amount_tick = 10 ** - market['precision']['amount']
+        return price_tick, amount_tick
+
     async def watch_orderbook(self, symbol: str) -> dict[str, Any]:
         return await self.exchange.watch_order_book(self._as_pair(symbol))
 
-    async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float = None):
-        reciept = await self.exchange.create_order(self._as_pair(symbol), order_type.value, side.value, amount, price)
+    async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float):
+        reciept = await self.exchange.create_order(symbol=self._as_pair(symbol), type=order_type.value, side=side.value, amount=amount, price=price)
         return reciept['id']
+
+    async def edit_order(self, order_id: str, symbol: str, order_type: OrderType, side: Side, amount: float, price: float):
+        try:
+            reciept = await self.exchange.edit_order(order_id, symbol=self._as_pair(symbol), type=order_type.value, side=side.value, amount=amount, price=price)
+            return reciept['id']
+        except Exception as e:
+            logger.error(f"Failed to edit order: {e}")
+            closed_orders = await self.exchange.fetch_closed_order(order_id, self._as_pair(symbol))
+            if closed_orders:
+                raise OrderClosedException
+            return None
 
     @with_user_params
     async def watch_orders(self, **kwargs) -> list[dict[str, Any]]:
         return await self.exchange.watch_orders(**kwargs)
+
+    async def cancel_order(self, order_id: str, symbol: str):
+        try:
+            return await self.exchange.cancel_order(order_id, self._as_pair(symbol))
+        except Exception as e:
+            logger.error(f"Failed to cancel order: {e}")
+            return None
 
     async def cancel_all_orders(self, symbol: str, order_ids: list[str]):
         if not order_ids:

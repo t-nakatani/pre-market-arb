@@ -10,15 +10,22 @@ class TradeExecutor:
         self.bybit_client = bybit_client
         self.hyperliquid_client = hyperliquid_client
 
-    async def _place_limit_order(self, exchange: Exchange, symbol: str, side: str, amount: float, price: float):
+    async def place_limit_order(self, exchange: Exchange, symbol: str, side: str, amount: float, price: float):
         # TODO
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
-        return client.place_order(symbol, 'limit', side, amount, price)
+        return await client.place_order(symbol, OrderType.LIMIT, side, amount, price)
+
+    async def edit_limit_order(self, exchange: Exchange, order_id: str, symbol: str, side: str, amount: float, price: float):
+        client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
+        return await client.edit_order(order_id, symbol, OrderType.LIMIT, side, amount, price)
 
     async def place_market_order(self, exchange: Exchange, symbol: str, side: str, amount: float):
-        # TODO
         client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
-        return client.place_market_order(symbol, side, amount)
+        return await client.place_order(symbol, OrderType.MARKET, side, amount)
+
+    async def cancel_order(self, exchange: Exchange, order_id: str, symbol: str):
+        client = self.bybit_client if exchange == Exchange.BYBIT else self.hyperliquid_client
+        return await client.cancel_order(order_id, symbol)
 
     async def cancel_all_orders(self, symbol: str, bybit_order_ids: list[str], hyperliquid_order_ids: list[str]):
         await asyncio.gather(

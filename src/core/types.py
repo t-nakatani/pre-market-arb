@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -14,3 +15,9 @@ class Side(Enum):
 class OrderType(Enum):
     LIMIT = 'limit'
     MARKET = 'market'
+
+
+@dataclass
+class LimitInfo:
+    exchange: Exchange
+    side: Side
