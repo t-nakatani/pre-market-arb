@@ -1,6 +1,7 @@
 from functools import wraps
 from typing import Any
 
+from client.hyperliquid_decorator import handle_order_errors
 from client.i_client import IExchangeClient
 from core.exceptions import OrderClosedException
 from core.types import OrderType, Side
@@ -39,10 +40,12 @@ class HyperliquidClient(IExchangeClient):
     async def watch_orderbook(self, symbol: str) -> dict[str, Any]:
         return await self.exchange.watch_order_book(self._as_pair(symbol))
 
+    @handle_order_errors
     async def place_order(self, symbol: str, order_type: OrderType, side: Side, amount: float, price: float):
         reciept = await self.exchange.create_order(symbol=self._as_pair(symbol), type=order_type.value, side=side.value, amount=amount, price=price)
         return reciept['id']
 
+    @handle_order_errors
     async def edit_order(self, order_id: str, symbol: str, order_type: OrderType, side: Side, amount: float, price: float):
         try:
             reciept = await self.exchange.edit_order(order_id, symbol=self._as_pair(symbol), type=order_type.value, side=side.value, amount=amount, price=price)
