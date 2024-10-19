@@ -2,15 +2,8 @@ import asyncio
 from typing import Optional
 
 from client.i_client import IExchangeClient
+from core.types import BestPrices
 from loguru import logger
-
-
-class BestPrices:
-    def __init__(self, best_bid: float, best_ask: float):
-        if best_bid > best_ask:
-            raise ValueError("best_bid must be less than best_ask")
-        self.bid = best_bid
-        self.ask = best_ask
 
 
 class PriceOracle:

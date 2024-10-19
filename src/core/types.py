@@ -21,3 +21,10 @@ class OrderType(Enum):
 class LimitInfo:
     exchange: Exchange
     side: Side
+
+class BestPrices:
+    def __init__(self, best_bid: float, best_ask: float):
+        if best_bid > best_ask:
+            raise ValueError("best_bid must be less than best_ask")
+        self.bid = best_bid
+        self.ask = best_ask
