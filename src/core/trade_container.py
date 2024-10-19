@@ -96,36 +96,25 @@ class TradeContainer:
         """リミット価格を決定します。"""
         return best_prices.bid if self.trade_config.limit_info.side == Side.BUY else best_prices.ask
 
-    async def _place_or_edit_order(self, order_id, limit_price, amount):
+    async def _place_limit_order(self, order_id, limit_price, amount):
         """注文を配置または編集します。"""
-        if not order_id:
+        try:
             order_id = await self.trade_executor.place_limit_order(
                 exchange=self.trade_config.limit_info.exchange,
+                order_id=order_id,
                 symbol=self.trade_config.symbol,
                 side=self.trade_config.limit_info.side,
                 amount=amount,
                 price=limit_price
             )
-            logger.info(f"Placed limit order: {self.trade_config.symbol}, {self.trade_config.limit_info.side}, {amount}, {limit_price}, {order_id}")
-        else:
-            try:
-                order_id = await self.trade_executor.edit_limit_order(
-                    exchange=self.trade_config.limit_info.exchange,
-                    order_id=order_id,
-                    symbol=self.trade_config.symbol,
-                    side=self.trade_config.limit_info.side,
-                    amount=amount,
-                    price=limit_price
-                )
-            except OrderClosedException:
-                order_id = None
-                await self._settle_another_side(
-                    exchange=self.trade_config.limit_info.exchange,
-                    side=self.trade_config.limit_info.side,
-                    amount=amount,
-                    price=limit_price
-                )
-            logger.info(f"Edited limit order: {self.trade_config.symbol}, {self.trade_config.limit_info.side}, {amount}, {limit_price}, {order_id}")
+        except OrderClosedException:
+            order_id = None
+            await self._settle_another_side(
+                exchange=self.trade_config.limit_info.exchange,
+                side=self.trade_config.limit_info.side,
+                amount=amount,
+                price=limit_price
+            )
         return order_id
 
     async def notify_market_status_changed(self, should_trade: bool) -> None:
