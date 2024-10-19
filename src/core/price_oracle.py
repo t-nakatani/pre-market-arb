@@ -21,6 +21,16 @@ class PriceOracle:
         self._hyperliquid_best_price: Optional[BestPrices] = None
         self._lock = asyncio.Lock()
 
+    @property
+    async def bybit_best_prices(self) -> Optional[BestPrices]:
+        async with self._lock:
+            return self._bybit_best_price
+
+    @property
+    async def hyperliquid_best_prices(self) -> Optional[BestPrices]:
+        async with self._lock:
+            return self._hyperliquid_best_price
+
     async def _watch_bybit_best_prices(self, symbol: str):
         while True:
             bybit_order_book = await self.bybit_client.watch_orderbook(symbol)
@@ -40,14 +50,6 @@ class PriceOracle:
                 best_bid=hyperliquid_bids[0][0],
                 best_ask=hyperliquid_asks[0][0]
             )
-
-    async def get_bybit_best_prices(self) -> Optional[BestPrices]:
-        async with self._lock:
-            return self._bybit_best_price
-
-    async def get_hyperliquid_best_prices(self) -> Optional[BestPrices]:
-        async with self._lock:
-            return self._hyperliquid_best_price
 
     async def start(self, symbol: str):
         try:

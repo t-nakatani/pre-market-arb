@@ -42,6 +42,13 @@ class TradeContainer(SettleObserverMixin):
         self.sub_strategy: ISubStrategy = sub_strategy
         logger.debug(f"TradeContainer initialized: {self.trade_config.symbol}")
 
+    @property
+    async def _best_prices(self) -> Optional:
+        """最良価格を取得します。"""
+        if self.trade_config.limit_info.exchange == Exchange.BYBIT:
+            return await self.price_oracle.bybit_best_prices
+        return await self.price_oracle.hyperliquid_best_prices
+
     def get_status(self) -> dict:
         """取引の状態を取得します。"""
         return {
@@ -75,7 +82,7 @@ class TradeContainer(SettleObserverMixin):
             order_id = None
             limit_price = None
             while self.is_running:
-                best_prices = await self._get_best_prices()
+                best_prices = await self._best_prices
                 if not best_prices:
                     logger.info(f"No best prices for {self.trade_config.symbol}")
                     await asyncio.sleep(1)
@@ -98,12 +105,6 @@ class TradeContainer(SettleObserverMixin):
             logger.error(f"_sticky_limit_orderでエラーが発生しました: {e}")
         finally:
             await self._cleanup()
-
-    async def _get_best_prices(self) -> Optional:
-        """最良価格を取得します。"""
-        if self.trade_config.limit_info.exchange == Exchange.BYBIT:
-            return await self.price_oracle.get_bybit_best_prices()
-        return await self.price_oracle.get_hyperliquid_best_prices()
 
     async def _place_limit_order(self, order_id, limit_price, amount):
         """注文を配置または編集します。"""

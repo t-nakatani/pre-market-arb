@@ -35,10 +35,6 @@ class TradeExecutor:
             self.hyperliquid_client.cancel_all_orders(symbol, hyperliquid_order_ids)
         )
 
-    async def close(self):
-        await self.bybit_client.close()
-        await self.hyperliquid_client.close()
-
     async def place_limit_order(self, exchange: Exchange, order_id: Optional[str], symbol: str, side: Side, amount: float, price: float) -> str:
         if not order_id:
             order_id = await self._place_new_limit_order(exchange, symbol, side.value, amount, price)
