@@ -12,6 +12,10 @@ from loguru import logger
 
 class OrderbookSearcher:
     def __init__(self, symbol: str, ccxt_bybit_client: ccxt.Exchange, ccxt_hyperliquid_client: ccxt.Exchange):
+        self.target_main_strategy_choices = [
+            StrategyChoice.LIMIT_SELL_HYLIQ_MARKET_BUY_BYBIT,
+            StrategyChoice.LIMIT_BUY_HYLIQ_MARKET_SELL_BYBIT,
+        ]
         self.observers = []
         self.symbol = symbol
         self.bybit_client = BybitClient(ccxt_bybit_client)
@@ -51,7 +55,8 @@ class OrderbookSearcher:
             best_prices = await _get_best_prices()
             search_results = TradeStrategy.judge(best_prices, threshold=trade_threshold)
             for strategy_choice, should_trade in search_results.items():
-                await self.notify_market_status_changed(strategy_choice, should_trade)
+                if strategy_choice in self.target_main_strategy_choices:
+                    await self.notify_market_status_changed(strategy_choice, should_trade)
             await asyncio.sleep(0.1)
 
     async def start(self, trade_threshold: float):
