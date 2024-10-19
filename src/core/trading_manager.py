@@ -1,7 +1,7 @@
 import asyncio
 
 from core.notifier import Notifier
-from core.observer_mixin import MarketStatusObserverMixin
+from core.observer_pattern.i_observer_mixin import IMarketStatusObserverMixin
 from core.orderbook_searcher import OrderbookSearcher
 from core.price_oracle import PriceOracle
 from core.trade_container import TradeContainer
@@ -11,42 +11,9 @@ from core.trading_strategy import StrategyChoice, TradeStrategy
 from loguru import logger
 
 
-class Orders:
+class MarketStatusObserverMixin(IMarketStatusObserverMixin):
     def __init__(self):
-        self.bybit_order_ids: list[str] = []
-        self.hyperliquid_order_ids: list[str] = []
-
-    def pop_bybit_order_ids(self) -> list[str]:
-        order_ids = self.bybit_order_ids
-        self.bybit_order_ids = []
-        return order_ids
-
-    def pop_hyperliquid_order_ids(self) -> list[str]:
-        order_ids = self.hyperliquid_order_ids
-        self.hyperliquid_order_ids = []
-        return order_ids
-
-
-class TradingManager(MarketStatusObserverMixin):
-    def __init__(self, config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor, notifier: Notifier):
-        self.config = config
-        self.price_oracle = price_oracle
-        self.trade_executor = trade_executor
-        self.notifier = notifier
         self.containers: dict[StrategyChoice, TradeContainer] = {}
-
-    async def start_search(self, searcher: OrderbookSearcher):
-        try:
-            searcher.register_observer(self)
-            await asyncio.gather(
-                self.notifier.start(),
-                searcher.start(self.config.delta),
-                self.price_oracle.start(self.config.symbol)
-            )
-        except Exception as e:
-            logger.error(f"Error in start_search: {e}")
-        finally:
-            await self.stop_all()
 
     async def on_market_status_changed(self, strategy_choice: StrategyChoice, should_trade: bool):
         if should_trade:
@@ -63,6 +30,28 @@ class TradingManager(MarketStatusObserverMixin):
                 await self.containers[strategy_choice].stop()
                 logger.info(f"Stopped container for {strategy_choice}")
                 del self.containers[strategy_choice]
+
+
+class TradingManager(MarketStatusObserverMixin):
+    def __init__(self, config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor, notifier: Notifier):
+        super().__init__()
+        self.config = config
+        self.price_oracle = price_oracle
+        self.trade_executor = trade_executor
+        self.notifier = notifier
+
+    async def start_search(self, searcher: OrderbookSearcher):
+        try:
+            searcher.register_observer(self)
+            await asyncio.gather(
+                self.notifier.start(),
+                searcher.start(self.config.delta),
+                self.price_oracle.start(self.config.symbol)
+            )
+        except Exception as e:
+            logger.error(f"Error in start_search: {e}")
+        finally:
+            await self.stop_all()
 
     async def stop_all(self):
         for container in self.containers.values():

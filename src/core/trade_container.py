@@ -3,15 +3,37 @@ from typing import Optional
 
 from core.exceptions import OrderClosedException
 from core.notifier import Notifier
+from core.observer_mixin import ISettleObserverMixin
 from core.price_oracle import PriceOracle
+from core.sub_strategy import SubStrategy
 from core.trade_executor import TradeExecutor
 from core.trading_config import TradingConfig
 from core.types import Exchange, Side
 from loguru import logger
 
 
-class TradeContainer:
-    def __init__(self, trade_config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor):
+class SettleObserverMixin(ISettleObserverMixin):
+    def __init__(self):
+        self.notifier: Optional[Notifier] = None
+
+    def attach_notifier(self, notifier: Notifier) -> None:
+        """ノーティファイアをアタッチします。"""
+        notifier.register_observer(self)
+        self.notifier = notifier
+
+    def _update_order_id(self, order_id: str) -> None:
+        """注文IDを更新します。"""
+        if self.notifier:
+            self.notifier.update_topic(self, topic=order_id)
+
+    async def notify_market_status_changed(self, should_trade: bool) -> None:
+        """市場の状態が変化したときに通知します。"""
+        pass
+
+
+class TradeContainer(SettleObserverMixin):
+    def __init__(self, trade_config: TradingConfig, price_oracle: PriceOracle, trade_executor: TradeExecutor, sub_strategy: SubStrategy):
+        super().__init__()
         self.is_running: bool = False
         self.task: Optional[asyncio.Task] = None
         self.trade_config: TradingConfig = trade_config
@@ -31,11 +53,6 @@ class TradeContainer:
         """取引量を取得します。"""
         return 8.0
 
-    def attach_notifier(self, notifier: Notifier) -> None:
-        """ノーティファイアをアタッチします。"""
-        notifier.register_observer(self)
-        self.notifier = notifier
-
     async def start(self, notifier: Notifier) -> None:
         """取引を開始します。"""
         if not self.is_running:
@@ -51,11 +68,6 @@ class TradeContainer:
             if self.task:
                 await self.task
             logger.debug(f"TradeContainer stopped: {self.trade_config.symbol}")
-
-    def _update_order_id(self, order_id: str) -> None:
-        """注文IDを更新します。"""
-        if self.notifier:
-            self.notifier.update_topic(self, topic=order_id)
 
     async def _sticky_limit_order(self) -> None:
         """スティッキーリミットオーダーを実行します。"""
@@ -78,7 +90,6 @@ class TradeContainer:
                 amount = self.get_amount()
                 order_id = await self._place_or_edit_order(order_id, limit_price, amount)
                 self._update_order_id(order_id)
-                await asyncio.sleep(0.2)
                 logger.info(f"Updated order id: {order_id}")
 
             await self.trade_executor.cancel_order(self.trade_config.limit_info.exchange, self.trade_config.symbol, self.trade_config.limit_info.side)

@@ -4,7 +4,7 @@ import asyncio
 import ccxt.pro as ccxt
 from client.bybit_client import BybitClient
 from client.hyperliquid_client import HyperliquidClient
-from core.observer_mixin import MarketStatusObserverMixin
+from core.observer_pattern.i_observer_mixin import IMarketStatusObserverMixin
 from core.trading_strategy import StrategyChoice, TradeStrategy
 from core.types import Exchange
 from loguru import logger
@@ -19,7 +19,7 @@ class OrderbookSearcher:
         self.bybit_queue = asyncio.Queue()
         self.hyperliquid_queue = asyncio.Queue()
 
-    def register_observer(self, observer: MarketStatusObserverMixin):
+    def register_observer(self, observer: IMarketStatusObserverMixin):
         self.observers.append(observer)
 
     async def notify_market_status_changed(self, strategy_choice: StrategyChoice, activate: bool):

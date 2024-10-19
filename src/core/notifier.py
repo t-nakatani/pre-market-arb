@@ -2,7 +2,7 @@ import asyncio
 from typing import Any
 
 from client.i_client import IExchangeClient
-from core.observer_mixin import SettleObserverMixin
+from core.observer_pattern.i_observer_mixin import ISettleObserverMixin
 from core.types import Exchange
 from loguru import logger
 
@@ -13,12 +13,12 @@ class Notifier:
         self.hyperliquid_client = hyperliquid_client
         self.is_running = False
         self.tasks = []
-        self.observers: dict[SettleObserverMixin, str] = {}
+        self.observers: dict[ISettleObserverMixin, str] = {}
 
-    def register_observer(self, observer: SettleObserverMixin):
+    def register_observer(self, observer: ISettleObserverMixin):
         self.observers[observer] = None
 
-    def update_topic(self, observer: SettleObserverMixin, topic: str):
+    def update_topic(self, observer: ISettleObserverMixin, topic: str):
         self.observers[observer] = topic
 
     async def start(self):
